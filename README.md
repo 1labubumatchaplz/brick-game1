@@ -1,0 +1,367 @@
+```html id="t1g9sa"
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>벽돌깨기 게임</title>
+
+<style>
+    body {
+        margin: 0;
+        background: #111;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+        color: white;
+    }
+
+    canvas {
+        background: #222;
+        border: 3px solid white;
+    }
+
+    .info {
+        position: absolute;
+        top: 20px;
+        width: 100%;
+        text-align: center;
+        font-size: 20px;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="info">
+    ← → 방향키로 이동
+</div>
+
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let score;
+
+// 패들
+const paddle = {
+    width: 120,
+    height: 15,
+    x: 0,
+    y: 560,
+    speed: 8,
+    dx: 0
+};
+
+// 공
+const ball = {
+    x: 0,
+    y: 0,
+    radius: 10,
+    speed: 5,
+    dx: 5,
+    dy: -5
+};
+
+// 벽돌 설정
+const brick = {
+    rowCount: 5,
+    colCount: 10,
+    width: 70,
+    height: 20,
+    padding: 10,
+    offsetTop: 60,
+    offsetLeft: 35
+};
+
+let bricks = [];
+
+// 초기화 함수
+function initGame() {
+
+    score = 0;
+
+    paddle.x = canvas.width / 2 - paddle.width / 2;
+
+    ball.x = canvas.width / 2;
+    ball.y = canvas.height - 60;
+    ball.dx = 5;
+    ball.dy = -5;
+
+    bricks = [];
+
+    for (let r = 0; r < brick.rowCount; r++) {
+        bricks[r] = [];
+
+        for (let c = 0; c < brick.colCount; c++) {
+
+            bricks[r][c] = {
+                x: 0,
+                y: 0,
+                status: 1
+            };
+        }
+    }
+}
+
+// 키 입력
+document.addEventListener("keydown", keyDown);
+document.addEventListener("keyup", keyUp);
+
+function keyDown(e) {
+    if (e.key === "ArrowRight") {
+        paddle.dx = paddle.speed;
+    }
+    else if (e.key === "ArrowLeft") {
+        paddle.dx = -paddle.speed;
+    }
+}
+
+function keyUp(e) {
+    if (
+        e.key === "ArrowRight" ||
+        e.key === "ArrowLeft"
+    ) {
+        paddle.dx = 0;
+    }
+}
+
+// 패들 그리기
+function drawPaddle() {
+
+    ctx.beginPath();
+
+    ctx.rect(
+        paddle.x,
+        paddle.y,
+        paddle.width,
+        paddle.height
+    );
+
+    ctx.fillStyle = "#00ffcc";
+    ctx.fill();
+
+    ctx.closePath();
+}
+
+// 공 그리기
+function drawBall() {
+
+    ctx.beginPath();
+
+    ctx.arc(
+        ball.x,
+        ball.y,
+        ball.radius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = "#ff4444";
+    ctx.fill();
+
+    ctx.closePath();
+}
+
+// 벽돌 그리기
+function drawBricks() {
+
+    for (let r = 0; r < brick.rowCount; r++) {
+
+        for (let c = 0; c < brick.colCount; c++) {
+
+            const b = bricks[r][c];
+
+            if (b.status === 1) {
+
+                const brickX =
+                    c * (brick.width + brick.padding)
+                    + brick.offsetLeft;
+
+                const brickY =
+                    r * (brick.height + brick.padding)
+                    + brick.offsetTop;
+
+                b.x = brickX;
+                b.y = brickY;
+
+                ctx.beginPath();
+
+                ctx.rect(
+                    brickX,
+                    brickY,
+                    brick.width,
+                    brick.height
+                );
+
+                ctx.fillStyle =
+                    `hsl(${r * 60}, 80%, 50%)`;
+
+                ctx.fill();
+
+                ctx.closePath();
+            }
+        }
+    }
+}
+
+// 점수 표시
+function drawScore() {
+
+    ctx.font = "24px Arial";
+    ctx.fillStyle = "white";
+
+    ctx.fillText(
+        "점수: " + score,
+        20,
+        30
+    );
+}
+
+// 패들 이동
+function movePaddle() {
+
+    paddle.x += paddle.dx;
+
+    if (paddle.x < 0) {
+        paddle.x = 0;
+    }
+
+    if (paddle.x + paddle.width > canvas.width) {
+        paddle.x = canvas.width - paddle.width;
+    }
+}
+
+// 공 이동
+function moveBall() {
+
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    // 좌우 벽 충돌
+    if (
+        ball.x + ball.radius > canvas.width ||
+        ball.x - ball.radius < 0
+    ) {
+        ball.dx *= -1;
+    }
+
+    // 위 벽 충돌
+    if (ball.y - ball.radius < 0) {
+        ball.dy *= -1;
+    }
+
+    // 패들 충돌
+    if (
+        ball.y + ball.radius > paddle.y &&
+        ball.x > paddle.x &&
+        ball.x < paddle.x + paddle.width
+    ) {
+        ball.dy = -ball.speed;
+    }
+
+    // 게임 오버
+    if (ball.y + ball.radius > canvas.height) {
+
+        setTimeout(() => {
+
+            const restart =
+                confirm("게임 오버!\n다시 시작하시겠습니까?");
+
+            if (restart) {
+                initGame();
+            }
+
+        }, 100);
+
+        ball.dx = 0;
+        ball.dy = 0;
+    }
+}
+
+// 벽돌 충돌
+function collisionDetection() {
+
+    for (let r = 0; r < brick.rowCount; r++) {
+
+        for (let c = 0; c < brick.colCount; c++) {
+
+            const b = bricks[r][c];
+
+            if (b.status === 1) {
+
+                if (
+                    ball.x > b.x &&
+                    ball.x < b.x + brick.width &&
+                    ball.y > b.y &&
+                    ball.y < b.y + brick.height
+                ) {
+                    ball.dy *= -1;
+
+                    b.status = 0;
+
+                    score++;
+
+                    // 승리
+                    if (
+                        score ===
+                        brick.rowCount * brick.colCount
+                    ) {
+
+                        setTimeout(() => {
+
+                            const restart =
+                                confirm("승리했습니다!\n다시 시작하시겠습니까?");
+
+                            if (restart) {
+                                initGame();
+                            }
+
+                        }, 100);
+
+                        ball.dx = 0;
+                        ball.dy = 0;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 메인 루프
+function draw() {
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    drawBricks();
+    drawPaddle();
+    drawBall();
+    drawScore();
+
+    movePaddle();
+    moveBall();
+
+    collisionDetection();
+
+    requestAnimationFrame(draw);
+}
+
+// 시작
+initGame();
+draw();
+
+</script>
+
+</body>
+</html>
+```
